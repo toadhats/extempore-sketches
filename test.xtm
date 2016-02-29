@@ -1,0 +1,109 @@
+(sys:load "libs/core/instruments.xtm")
+
+(bind-func saw_synth_note_c
+  (lambda (data:NoteInitData* nargs:i64 dargs:SAMPLE*)
+  (let ((sawl (saw_c 0.))
+  (sawr (saw_c 0.)))
+  (lambda (time:i64 chan:i64 freq:SAMPLE amp:SAMPLE)
+  (cond ((= chan 0)
+  (sawl amp freq)
+  (sawl amp (/ 2 freq)))
+  ((= chan 1)
+  (sawr amp freq)
+  (sawr amp (/ 4 freq)))
+  (else 0.0))))))
+
+  (bind-func saw_synth_fx 200000 ;; extra memory for the delay lines
+    (let ((delayl (delay_c 22050))
+    (delayr (delay_c 22050)))
+    (lambda (in:SAMPLE time:i64 chan:i64 dat:SAMPLE*)
+    (cond ((= chan 0)
+    (delayl in 0.3 0.2))
+    ((= chan 1)
+    (delayr in 0.3 0.2))
+    (else 0.0)))))
+
+    (bind-instrument saw_synth saw_synth_note_c saw_synth_fx)
+    (bind-instrument synth saw_synth_note_c saw_synth_fx)
+
+
+    (bind-func dsp:DSP
+  (lambda (in time chan dat)
+    (saw_synth in time chan dat)))
+(dsp:set! dsp)
+
+(define chord
+   (lambda ()
+      (play-note (now) saw_synth 60 80 *second*)
+      (play-note (now) saw_synth 64 80 *second*)
+      (play-note (now) saw_synth 67 80 *second*)))
+
+(play-note (now) saw_synth (random 60 80) 80 (* 1.0 *second*))
+(chord)
+
+; hello world as a list of note pitches
+; transposed down two octaves (24 semitones)
+(define melody (map (lambda (c)
+                       (- (char->integer c) 24))
+                    (string->list "Hello World!")))
+
+; Define a recursive function to cycle through the pitches in melody
+(define loop
+   (lambda (time pitch-list)
+      (cond ((null? pitch-list) (println 'done))
+            (else (play-note time saw_synth (car pitch-list) 80 10000)
+                  (loop (+ time (* *second* 0.5))
+                        (cdr pitch-list))))))
+
+; start playing melody
+(loop (now) melody)
+
+(dotimes (i 8)
+  (play-note (+ (now) (* i 5000)) saw_synth (+ 60 i) 80 4000))
+
+  ;; recursive whole-tone scale
+(let loop ((i 0))
+  (play-note (+ (now) (* i 2500)) saw_synth (+ 60 i) 80 4000)
+  (if (< i 9) (loop (+ i 2))))
+
+
+
+  ;; map calls lambda for each argument of list
+  (map (lambda (p)
+  (play-note (now) saw_synth p 80 44100))
+  (list 60 63 67))
+
+  ;; for-each broken chord with volumes
+(for-each (lambda (p d v)
+            (play-note (+ (now) d) saw_synth p v (- 88200 d)))
+          (list 60 64 67)
+          (list 0 22050 44100)
+          (list 90 50 20))
+
+;; loop over a sequence of pitches indefinitely
+(define play-seq1
+  (lambda (time plst)
+
+    (play-note time saw_synth (car plst) 80 11025)
+    (if (null? (cdr plst))
+    (callback (+ time 10000) 'play-seq1 (+ time 11025) '(26 34))
+    (callback (+ time 10000) 'play-seq1 (+ time 11025) (cdr plst))
+    )
+  )
+)
+
+(play-seq1 (now) '(26 33))
+
+(define play-seq2
+  (lambda (time plst)
+
+    (play-note time saw_synth (car plst) 65 11025)
+    (if (null? (cdr plst))
+      (callback (+ time 10000) 'play-seq2 (+ time 11025) '(28 28 63 26 63 73 26 75))
+      (callback (+ time 10000) 'play-seq2 (+ time 11025) (cdr plst))
+    )
+  )
+)
+
+(play-seq2 (now) '(33 70))
+((play-note (now) saw_synth 75 80 44100))

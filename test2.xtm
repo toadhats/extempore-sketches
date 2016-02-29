@@ -1,0 +1,41 @@
+(sys:load "libs/core/instruments.xtm")
+(sys:load "libs/external/instruments_ext-scm.xtm")
+
+;; define a synth using the provided components
+;; synth_note_c and synth_fx
+(bind-instrument synth synth_note_c synth_fx)
+
+;; add the instrument to the DSP output sink closure
+(bind-func dsp:DSP
+  (lambda (in time chan dat)
+  (synth in time chan dat)))
+
+  (dsp:set! dsp)
+
+  (play-note (now) synth (random 60 80) 80 (* .5 *second*))
+  (play-note (now) synth 40 80 *second*)
+
+  ;; recursive major scale with rhythm
+  (let loop ((scale '(0 2 4 5 7 9 11 12))
+  (dur '(22050 11025 11025 22050 11025 11025 44100 44100))
+  (time 0))
+  (play-note (+ (now) time) synth (+ 60 (car scale)) 80 (car dur))
+  (if (not (null? (cdr scale)))
+  (loop (cdr scale) (cdr dur) (+ time (car dur)))))
+
+  ;; Major chord
+  (let loop ((chord '(0 4 7)))
+  (play-note (now) synth (+ 60 (car chord)) 80 44100)
+  (if (not (null? (cdr chord)))
+  (loop (cdr chord))))
+
+  ;; map calls lambda for each argument of list. Minor chord
+  (map (lambda (p)
+  (play-note (now) synth p 80 44100))
+  (list 60 63 67))
+
+  (for-each (lambda (p d v)
+  (play-note (+ (now) d) synth p v (- 88200 d)))
+  (list 60 64 67)
+  (list 0 22050 44100)
+  (list 90 50 20))
