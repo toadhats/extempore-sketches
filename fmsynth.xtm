@@ -12,12 +12,16 @@
 
 (bind-instrument fmsynth fmsynth_note_c fmsynth_fx)
 (bind-instrument fmpad fmpad_note_c fmpad_fx)
+(bind-instrument sub subbass_note_c subbass_fx)
+(bind-instrument shimmer shimmer_pad_note_c shimmer_pad_fx)
 
 (bind-func dsp:DSP
   (lambda (in time chan dat)
     (cond ((< chan 2.0)
            (+ (* 0.5 (fmsynth in time chan dat))
-              (* 0.5 (fmpad in time chan dat))))
+              (* 0.5 (fmpad in time chan dat))
+              (* 0.5 (sub in time chan dat))
+              (* 0.5 (shimmer in time chan dat))))
           (else 0.0))))
 
 (dsp:set! dsp)
@@ -26,7 +30,7 @@
   (lambda (in time chan dat)
     0.0))
 
-(play-note (now) fmsynth (random 60 90) 80 44100)
+(play-note (now) sub (random 60 90) 100 44100)
 
 (define root 0)
 
@@ -43,7 +47,7 @@
 (define l1 (lambda args))
 
 
-(l1 (*metro* 'get-beat 4) 1/4 '(60 63 62 67 72 65 84 77 65 67)) ;; start one playing quavers
+(l1 (*metro* 'get-beat 4) 1/3 '(60 63 62 67 72 65 84 77 65 67)) ;; start one playing quavers
 
 (fmpad_fx.wet 0.6)
 (fmpad_fx.cwet 1.0)
@@ -60,6 +64,7 @@
     (map (lambda (p)
            (play fmpad p 80 (* .75 dur) 0.1 1.0))
          (pc:make-chord 40 80 4 (pc:chord root '-7)))
+         (play sub (+ 36 root) 100 dur)
     (callback (*metro* (+ beat (* .95 dur))) 'l2 (+ beat dur)
               dur)))
 
@@ -68,3 +73,12 @@
 
 
 (l2 (*metro* 'get-beat 4) 8 0)
+
+(play-note (*metro* 'get-beat 3) shimmer (+ 48 (random '(0 2 5 7))) 80 44100)
+
+(define l3
+  (lambda (beat dur)
+  (play fmsynth (pc:random 40 80 (pc:scale root 'dorian)) 80 dur))
+)
+(l3 (*metro* 'get-beat 1/3) 1 0)
+(pc:scale-from-pc  '(0 1 2 3 4))
