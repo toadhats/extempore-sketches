@@ -1,0 +1,10 @@
+(sys:load "libs/core/pc_ivl.xtm")
+
+(define *c-major* (pc:scale 0 'ionian))
+(*c-major*)
+
+(define *a-aeolian* (pc:scale 9 'aeolian))
+(*a-aeolian*)
+
+(define *c-minor* (pc:scale-from-chord 0 '(0 3 7)))
+(*c-minor*)
